@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 before:
   hooks:
@@ -34,9 +34,7 @@ archives:
       - README.md
       - LICENSE
 
-checksum:
-  name_template: "checksums.txt"
-
+dist: dist
 changelog:
   sort: asc
   filters:
@@ -49,7 +47,7 @@ changelog:
 release:
   github:
     owner: snehak201
-    name: gateway-pro
+    repo: gateway-pro
   name_template: "{{.ProjectName}} {{.Tag}}"
   draft: false
   prerelease: auto
