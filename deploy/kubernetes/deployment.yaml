@@ -1,0 +1,151 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-pro
+  labels:
+    app: gateway-pro
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gateway-pro
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: gateway-pro
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: gateway
+          image: snehakhoreja/gateway-pro:latest
+          imagePullPolicy: Always
+          ports:
+            - name: proxy
+              containerPort: 8080
+              protocol: TCP
+            - name: admin
+              containerPort: 9090
+              protocol: TCP
+          args:
+            - "-config"
+            - "/configs/gateway.yaml"
+          volumeMounts:
+            - name: config
+              mountPath: /configs
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 9090
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          lifecycle:
+            preStop:
+              exec:
+                # Give in-flight requests time to drain before termination
+                command: ["/bin/sh", "-c", "sleep 5"]
+      volumes:
+        - name: config
+          configMap:
+            name: gateway-pro-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-pro
+  labels:
+    app: gateway-pro
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway-pro
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: 8080
+    - name: admin
+      port: 9090
+      targetPort: 9090
+---
+# Expose via LoadBalancer for production
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-pro-external
+  labels:
+    app: gateway-pro
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway-pro
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-pro-config
+data:
+  gateway.yaml: |
+    server:
+      addr: ":8080"
+      read_timeout_seconds: 30
+      write_timeout_seconds: 30
+    admin:
+      addr: ":9090"
+    logging:
+      level: info
+      format: json
+    routes:
+      - path_prefix: /api
+        lb_algorithm: round_robin
+        timeout_seconds: 30
+        backends:
+          - url: http://my-service:8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway-pro
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway-pro
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

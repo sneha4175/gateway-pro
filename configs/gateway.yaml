@@ -1,0 +1,30 @@
+server:
+  addr: ":8080"
+  read_timeout_seconds: 30
+  write_timeout_seconds: 30
+
+admin:
+  addr: ":9090"
+
+logging:
+  level: info
+  format: json
+
+routes:
+  - path_prefix: /api/users
+    lb_algorithm: round_robin
+    timeout_seconds: 10
+    strip_prefix: false
+    backends:
+      - url: http://localhost:8081
+        weight: 1
+    rate_limit:
+      algorithm: sliding_window
+      rate: 5
+      window: 1m
+      key_by: ip
+    circuit_breaker:
+      failure_threshold: 50
+      min_requests: 20
+      open_duration_seconds: 30
+      half_open_requests: 5
