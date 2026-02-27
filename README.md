@@ -1,172 +1,139 @@
-<div align="center">
-  <h1>gateway-pro</h1>
-  <p><strong>Lightweight, production-grade API gateway written in Go</strong></p>
+# COMP6721 Applied Artificial Intelligence Project
 
-  [![CI](https://github.com/snehakhoreja/gateway-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/snehakhoreja/gateway-pro/actions/workflows/ci.yml)
-  [![Go Report Card](https://goreportcard.com/badge/github.com/snehakhoreja/gateway-pro)](https://goreportcard.com/report/github.com/snehakhoreja/gateway-pro)
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-  [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](go.mod)
-</div>
+## Project Description
+This repository contains the implementation and documentation for the COMP6721 course project. The goal is to classify indoor and outdoor images using machine learning techniques, including **Random Forests**, **Decision Trees (Supervised and semi-supervised)**, **Boosting**, and **Convolutional Neural Networks (CNN)**. The project compares model performance on the Places MIT Museum dataset.
 
----
+## Table of Contents
+- [Installation](#installation)
+- [Dataset](#dataset)
+- [Directory Structure](#directory-structure)
+- [Usage](#usage)
+- [Results](#results)
+- [Contributions](#contributions)
+- [Contact](#contact)
 
-gateway-pro is a single-binary API gateway that sits in front of your backend services and handles the things you'd otherwise wire up yourself: load balancing, rate limiting, circuit breaking, health checking, and metrics. It's built with Go's standard `net/http/httputil`, keeps external dependencies minimal, and is designed to be read and modified by a small team.
+## Installation
+### Prerequisites
+- Python 3.7+
+- Google Colab (suggested for GPU acceleration)
 
-## Features
-
-- **Load balancing** — round-robin, least-connections, weighted, and IP-hash (sticky sessions); all with active health checks
-- **Rate limiting** — token bucket or sliding window; keyed by IP, user ID, or API key; in-process (zero deps) or distributed via Redis
-- **Circuit breaking** — per-backend, three-state (closed/open/half-open), configurable thresholds
-- **Reverse proxy** — uses Go's battle-tested `httputil.ReverseProxy`; configurable per-route timeouts; strips or preserves path prefixes
-- **Observability** — Prometheus metrics on a separate admin port; structured JSON access logs via zap; `/healthz`, `/readyz`, and `/backends` endpoints
-- **Hot-reload** — edit `gateway.yaml` and changes apply without restarting; uses `fsnotify`
-- **Graceful shutdown** — drains in-flight requests on SIGTERM
-
-## Quick start
-
-### With Docker
-
+### Dependencies
+Install required libraries using:
 ```bash
-docker run -p 8080:8080 -p 9090:9090 \
-  -v $(pwd)/configs/gateway.yaml:/configs/gateway.yaml \
-  snehakhoreja/gateway-pro:latest
+pip install numpy scikit-learn matplotlib seaborn pillow torch torchvision
 ```
 
-### From source
+## Dataset
+### Source
+Places MIT Museum Dataset:
+- Download from [MIT Places Dataset](http://places.csail.mit.edu/browser.html)
+- Training Data: `museum-indoor` (8119 images), `museum-outdoor` (4221 images)
+- Validation Data: Balanced subset for evaluation
 
-```bash
-git clone https://github.com/snehakhoreja/gateway-pro.git
-cd gateway-pro
-make build
-./bin/gateway-pro -config configs/gateway.yaml
+### Preprocessing
+- Images resized to **64x64 pixels** and converted to **RGB arrays**
+- Dataset structure:
+  ```
+  dataset/
+    Museum_Training/
+      Training/
+        museum-indoor/
+        museum-outdoor/
+    Museum_Test/
+      Museum_Validation/
+        museum-indoor/
+        museum-outdoor/
+  ```
+
+### Sample Dataset
+- A small subset of images (`sample_dataset/`) is included for validation
+- Contains **50 indoor** and **50 outdoor** images
+
+## Directory Structure
+```
+COMP6721_Project/
+├── src/
+│   ├── random_forest.py
+│   ├── decision_tree_supervised.py
+│   ├── decision_tree_semi_supervised.py
+│   ├── boosting.py
+│   └── cnn.py  # Phase 2 Implementation
+├── dataset/
+│   ├── dataset_description.md
+│   └── sample_dataset/
+├── requirements.txt
+├── README.md
+└── pretrained_models/
 ```
 
-Requires Go 1.22+. No C dependencies.
+## Usage
+### Running Scripts
+- **Random Forest Classifier**:
+  ```bash
+  python src/random_forest.py
+  ```
 
-### With Docker Compose (includes Prometheus + Grafana)
+- **Decision Tree (Supervised)**:
+  ```bash
+  python src/decision_tree_supervised.py
+  ```
 
-```bash
-cd examples/docker-compose
-docker compose up
-```
+- **Decision Tree (Semi-Supervised)**:
+  ```bash
+  python src/decision_tree_semi_supervised.py
+  ```
 
-- Gateway: http://localhost:8080
-- Grafana: http://localhost:3000
-- Prometheus: http://localhost:9091
+- **Boosting Classifier**:
+  ```bash
+  python src/boosting.py
+  ```
 
-## Configuration
+- **CNN (Phase 2)**:
+  ```bash
+  python src/cnn.py
+  ```
 
-gateway-pro is configured with a single YAML file. Environment variables are expanded automatically (`${MY_VAR}`).
+### Output
+- Performance metrics (**accuracy**, **precision**, **recall**, **F1-score**) and **confusion matrices** are printed
+- Visualizations saved in `outputs/`
+- CNN-specific outputs include **training curves**, **validation metrics**, and **model architecture diagrams**
 
-```yaml
-server:
-  addr: ":8080"
-  read_timeout_seconds: 30
-  write_timeout_seconds: 30
+## Results
+### Key Findings
+- CNN outperforms traditional machine learning models on the Places MIT Dataset
+- Semi-supervised learning shows improved performance over supervised-only approaches
+- Detailed results and analysis available in the [Project Report](#note)
 
-admin:
-  addr: ":9090"      # Prometheus metrics, /healthz, /readyz, /backends
+### Note
+For full results and analysis, refer to the project report submitted via Moodle.
 
-logging:
-  level: info        # debug | info | warn | error
-  format: json       # json | console
+## Contributions
+### **Sneha Khoreja**
+- **Phase 1**: 
+  - Dataset preprocessing & validation
+  - Model training (Random Forest, Boosting)
+  - Report writing (methodology, experimental setup)
+- **Phase 2**: 
+  - CNN architecture development (CNN1)
+  - Hyperparameter tuning
+  - Model training & optimization
+  - Report writing (CNN methodology and results)
 
-routes:
-  - path_prefix: /api/users
-    lb_algorithm: round_robin      # round_robin | least_conn | weighted | ip_hash
-    timeout_seconds: 10
-    strip_prefix: false
+### **Siya Patel**
+- **Phase 1**: 
+  - Performance metrics & visualization
+  - Semi-Supervised Decision Tree implementation
+  - Code optimization & testing
+- **Phase 2**: 
+  - Advanced CNN architecture (CNN2)
+  - Model evaluation & visualization
+  - Code implementation & testing
+  - Report writing (CNN performance analysis)
 
-    backends:
-      - url: http://user-svc-1:8080
-      - url: http://user-svc-2:8080
+## Contact
+For questions, email:
+- snehakhoreja1710@gmail.com
+- siyapatel270702@gmail.com
 
-    rate_limit:
-      algorithm: token_bucket      # token_bucket | sliding_window
-      rate: 500                    # tokens/sec
-      burst: 1000
-      key_by: ip                   # ip | user | api_key
-      # redis_url: redis://redis:6379/0   # uncomment for distributed
-
-    circuit_breaker:
-      failure_threshold: 50        # trip if ≥50% requests fail
-      min_requests: 20
-      open_duration_seconds: 30
-      half_open_requests: 5
-```
-
-See [`configs/gateway.yaml`](configs/gateway.yaml) for a full annotated example with all four load-balancing algorithms.
-
-## Admin endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET :9090/metrics` | Prometheus metrics |
-| `GET :9090/healthz` | Liveness check (always 200 if process is up) |
-| `GET :9090/readyz` | Readiness check (503 if no healthy backends) |
-| `GET :9090/backends` | JSON snapshot of all backends and their circuit-breaker states |
-
-## Metrics
-
-| Metric | Type | Labels |
-|--------|------|--------|
-| `gateway_requests_total` | Counter | `route`, `method`, `status` |
-| `gateway_request_duration_seconds` | Histogram | `route`, `method` |
-| `gateway_active_connections` | Gauge | — |
-
-A Grafana dashboard JSON is provided in [`examples/docker-compose/grafana/`](examples/docker-compose/grafana/).
-
-## Kubernetes
-
-```bash
-# Apply the manifests (edit the ConfigMap first)
-kubectl apply -f deploy/kubernetes/deployment.yaml
-
-# Or use the Helm chart
-helm install my-gateway deploy/helm/gateway-chart \
-  --set image.tag=latest
-```
-
-The deployment includes an HPA (2–10 replicas, CPU-based), liveness/readiness probes, pre-stop sleep for graceful drain, and Prometheus scrape annotations.
-
-## Development
-
-```bash
-make test          # unit tests with race detector
-make lint          # golangci-lint
-make bench         # Go benchmarks
-make load-test     # hey-based load test against localhost:8080
-```
-
-## Project structure
-
-```
-cmd/gateway/          Entry point
-internal/
-  config/             YAML loader + fsnotify hot-reload
-  loadbalancer/       Round-robin, least-conn, weighted, IP-hash
-  ratelimiter/        Token bucket + sliding window (local & Redis)
-  circuitbreaker/     Three-state circuit breaker
-  health/             Active HTTP health checks
-  middleware/         Recovery, request ID, logger, Prometheus
-  proxy/              Gateway wiring — routes, dispatch, admin handlers
-deploy/
-  docker/             Dockerfile (multi-stage, scratch final image)
-  kubernetes/         Deployment, Service, ConfigMap, HPA
-  helm/               Helm chart
-examples/
-  docker-compose/     Full stack with Redis, Prometheus, Grafana
-configs/              Annotated example config
-```
-
-## Why not just use Kong / Traefik / Envoy?
-
-Those are excellent production tools. This project exists as a learning resource and as a starting point for teams that want a gateway they can actually read, debug, and modify themselves. The codebase is intentionally small: ~1,500 lines of Go, no code generation, no proto files.
-
-## Contributing
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
-
-## License
-
-Apache 2.0 — see [LICENSE](LICENSE).
+## About
+This repository contains the implementation and documentation for the COMP6721 course project, focusing on indoor/outdoor image classification using supervised and semi-supervised machine learning models including Random Forest, Decision Trees, Boosting, and CNNs.
