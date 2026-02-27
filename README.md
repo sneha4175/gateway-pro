@@ -132,7 +132,7 @@ For full results and analysis, refer to the project report submitted via Moodle.
 
 ## Contact
 For questions, email:
-- snehakhoreja1710@gmail.com
+- khorejasneha17@gmail.com
 - siyapatel270702@gmail.com
 
 ## About
