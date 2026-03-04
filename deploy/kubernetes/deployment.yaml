@@ -29,7 +29,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: gateway
-          image: snehakhoreja/gateway-pro:latest
+          image: sneha4175/gateway-pro:latest
           imagePullPolicy: Always
           ports:
             - name: proxy

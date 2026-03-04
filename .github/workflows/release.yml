@@ -50,7 +50,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: snehak201/gateway-pro
+          images: sneha4175/gateway-pro
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

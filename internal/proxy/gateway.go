@@ -26,26 +26,32 @@ import (
 
 // Gateway is the main http.Handler.
 type Gateway struct {
-	mu     sync.RWMutex
-	routes []*route
-	log    *zap.SugaredLogger
+	mu         sync.RWMutex
+	routes     []*route
+	log        *zap.SugaredLogger
+	authConfig *config.AuthConfig
+	traceStore *middleware.TraceStore
 }
 
 type route struct {
-	prefix  string
-	strip   bool
-	timeout time.Duration
-	lb      loadbalancer.Balancer
-	rl      ratelimiter.Limiter
+	prefix   string
+	strip    bool
+	timeout  time.Duration
+	lb       loadbalancer.Balancer
+	rl       ratelimiter.Limiter
 	breakers map[string]*circuitbreaker.Breaker // keyed by backend URL
 	checker  *health.Checker
 	handler  http.Handler
 }
 
 // NewGateway builds a Gateway from the given config.
-func NewGateway(cfg *config.Config, log *zap.SugaredLogger) (*Gateway, error) {
-	gw := &Gateway{log: log}
-	routes, err := buildRoutes(cfg.Routes, log)
+func NewGateway(cfg *config.Config, log *zap.SugaredLogger, authCfg *config.AuthConfig, traceStore *middleware.TraceStore) (*Gateway, error) {
+	gw := &Gateway{
+		log:        log,
+		authConfig: authCfg,
+		traceStore: traceStore,
+	}
+	routes, err := buildRoutes(cfg.Routes, log, authCfg, traceStore)
 	if err != nil {
 		return nil, err
 	}
@@ -165,10 +171,10 @@ func (gw *Gateway) backendsHandler(w http.ResponseWriter, _ *http.Request) {
 // Route construction
 // ---------------------------------------------------------------------------
 
-func buildRoutes(cfgs []config.RouteConfig, log *zap.SugaredLogger) ([]*route, error) {
+func buildRoutes(cfgs []config.RouteConfig, log *zap.SugaredLogger, authCfg *config.AuthConfig, traceStore *middleware.TraceStore) ([]*route, error) {
 	routes := make([]*route, 0, len(cfgs))
 	for i, cfg := range cfgs {
-		r, err := buildRoute(cfg, log)
+		r, err := buildRoute(cfg, log, authCfg, traceStore)
 		if err != nil {
 			return nil, fmt.Errorf("route[%d] %q: %w", i, cfg.PathPrefix, err)
 		}
@@ -177,7 +183,7 @@ func buildRoutes(cfgs []config.RouteConfig, log *zap.SugaredLogger) ([]*route, e
 	return routes, nil
 }
 
-func buildRoute(cfg config.RouteConfig, log *zap.SugaredLogger) (*route, error) {
+func buildRoute(cfg config.RouteConfig, log *zap.SugaredLogger, authCfg *config.AuthConfig, traceStore *middleware.TraceStore) (*route, error) {
 	lb := loadbalancer.New(cfg.LBAlgorithm, cfg.Backends)
 
 	rl, err := ratelimiter.New(cfg.RateLimit)
@@ -210,11 +216,26 @@ func buildRoute(cfg config.RouteConfig, log *zap.SugaredLogger) (*route, error) 
 		rt.serveProxy(w, r, log)
 	})
 
-	rt.handler = middleware.Chain(core,
+	// Build middleware chain: RequestID -> Tracing -> Logger -> Metrics -> Auth
+	chain := []func(http.Handler) http.Handler{
 		middleware.RequestID,
+	}
+
+	if traceStore != nil {
+		chain = append(chain, middleware.Tracing("gateway-pro", traceStore))
+	}
+
+	chain = append(chain,
 		middleware.Logger(log),
 		middleware.Metrics(cfg.PathPrefix),
 	)
+
+	if authCfg != nil && authCfg.Enabled {
+		// Auth middleware will be added in main.go after loading public key
+		// For now, we'll skip it here
+	}
+
+	rt.handler = middleware.Chain(core, chain...)
 
 	return rt, nil
 }

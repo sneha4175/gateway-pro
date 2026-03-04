@@ -16,10 +16,25 @@ import (
 // ---------------------------------------------------------------------------
 
 type Config struct {
-	Server  ServerConfig   `yaml:"server"`
-	Admin   AdminConfig    `yaml:"admin"`
-	Routes  []RouteConfig  `yaml:"routes"`
-	Logging LoggingConfig  `yaml:"logging"`
+	Server  ServerConfig  `yaml:"server"`
+	Admin   AdminConfig   `yaml:"admin"`
+	Routes  []RouteConfig `yaml:"routes"`
+	Logging LoggingConfig `yaml:"logging"`
+	Auth    AuthConfig    `yaml:"auth"`
+	Tracing TracingConfig `yaml:"tracing"`
+}
+
+type AuthConfig struct {
+	Enabled       bool     `yaml:"enabled"`
+	JWKSURL       string   `yaml:"jwks_url"`
+	PublicKeyPath string   `yaml:"public_key_path"`
+	SkipPaths     []string `yaml:"skip_paths"`
+}
+
+type TracingConfig struct {
+	Enabled     bool   `yaml:"enabled"`
+	Exporter    string `yaml:"exporter"` // stdout | otlp
+	ServiceName string `yaml:"service_name"`
 }
 
 type ServerConfig struct {
@@ -235,5 +250,21 @@ func validate(cfg *Config) error {
 			r.TimeoutSeconds = 30
 		}
 	}
+
+	if cfg.Auth.Enabled {
+		if cfg.Auth.JWKSURL == "" && cfg.Auth.PublicKeyPath == "" {
+			return fmt.Errorf("auth.enabled requires jwks_url or public_key_path")
+		}
+	}
+
+	if cfg.Tracing.Enabled {
+		if cfg.Tracing.ServiceName == "" {
+			cfg.Tracing.ServiceName = "gateway-pro"
+		}
+		if cfg.Tracing.Exporter == "" {
+			cfg.Tracing.Exporter = "stdout"
+		}
+	}
+
 	return nil
 }
