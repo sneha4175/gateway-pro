@@ -1,0 +1,72 @@
+# ── v0.2.0 additions — paste these blocks into your existing gateway.yaml ──
+
+# Add at the top level (same level as `server:`, `admin:`, `routes:`)
+
+auth:
+  enabled: true
+  # Path to PEM-encoded RSA public key.
+  # Generate a test key pair with:
+  #   openssl genrsa -out private.pem 2048
+  #   openssl rsa -in private.pem -pubout -out public.pem
+  public_key_path: "configs/public.pem"
+  # Requests to these path prefixes bypass JWT validation entirely.
+  skip_paths:
+    - "/health"
+    - "/healthz"
+    - "/readyz"
+    - "/metrics"
+
+tracing:
+  enabled: true
+  # URL of the FastAPI trace collector (tracing/collector/).
+  # Run locally: uvicorn collector:app --port 4317
+  collector_url: "http://localhost:4317"
+  service_name: "gateway-pro"
+  # 1.0 = trace every request. Reduce for high-traffic production.
+  sample_rate: 1.0
+
+
+# ── Full example showing v0.1.0 + v0.2.0 config together ──────────────────
+
+# server:
+#   addr: ":8080"
+#   read_timeout_seconds: 30
+#   write_timeout_seconds: 30
+#
+# admin:
+#   addr: ":9090"
+#
+# logging:
+#   level: info
+#   format: json
+#
+# auth:
+#   enabled: true
+#   public_key_path: "configs/public.pem"
+#   skip_paths:
+#     - "/health"
+#     - "/metrics"
+#
+# tracing:
+#   enabled: true
+#   collector_url: "http://localhost:4317"
+#   service_name: "gateway-pro"
+#   sample_rate: 1.0
+#
+# routes:
+#   - path_prefix: /api/users
+#     lb_algorithm: round_robin
+#     timeout_seconds: 10
+#     backends:
+#       - url: http://user-svc-1:8080
+#       - url: http://user-svc-2:8080
+#     rate_limit:
+#       algorithm: sliding_window
+#       rate: 500
+#       window: 1m
+#       key_by: ip
+#     circuit_breaker:
+#       failure_threshold: 50
+#       min_requests: 20
+#       open_duration_seconds: 30
+#       half_open_requests: 5

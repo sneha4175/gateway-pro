@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -200,8 +201,11 @@ func TestAuthMiddleware_TamperedSignature(t *testing.T) {
 	mw, _ := NewAuthMiddleware(AuthConfig{Enabled: true, PublicKeyPath: kp.pubPath})
 
 	token := kp.makeToken("user-42", time.Now().Add(time.Hour).Unix())
-	// Flip the last character of the signature — any signature change must fail.
-	tampered := token[:len(token)-1] + "X"
+	// Replace the entire signature segment with 256 zero bytes (base64url encoded).
+	// This is unambiguously wrong regardless of what the valid signature looks like.
+	parts := strings.Split(token, ".")
+	fakeSig := base64.RawURLEncoding.EncodeToString(make([]byte, 256))
+	tampered := parts[0] + "." + parts[1] + "." + fakeSig
 
 	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
 	req.Header.Set("Authorization", "Bearer "+tampered)
