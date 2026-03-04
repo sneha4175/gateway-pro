@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sneha4175/gateway-pro/internal/admin"
 	"github.com/sneha4175/gateway-pro/internal/config"
 	"github.com/sneha4175/gateway-pro/internal/middleware"
 	"github.com/sneha4175/gateway-pro/internal/proxy"
@@ -48,8 +49,22 @@ func main() {
 	}
 	defer watcher.Close()
 
+	// Initialize trace store
+	var traceStore *middleware.TraceStore
+	if cfg.Tracing.Enabled {
+		traceStore = middleware.NewTraceStore(100)
+		log.Infow("tracing enabled", "service", cfg.Tracing.ServiceName, "exporter", cfg.Tracing.Exporter)
+	}
+
+	// Initialize auth validator
+	var authCfg *config.AuthConfig
+	if cfg.Auth.Enabled {
+		authCfg = &cfg.Auth
+		log.Infow("auth enabled", "skip_paths", cfg.Auth.SkipPaths)
+	}
+
 	// Build the handler chain
-	gw, err := proxy.NewGateway(cfg, log)
+	gw, err := proxy.NewGateway(cfg, log, authCfg, traceStore)
 	if err != nil {
 		log.Fatalw("failed to build gateway", "err", err)
 	}
@@ -67,6 +82,11 @@ func main() {
 	// Metrics + health on a separate port so it's never behind auth middleware
 	adminMux := http.NewServeMux()
 	gw.RegisterAdminHandlers(adminMux)
+
+	// Register trace handlers if tracing enabled
+	if traceStore != nil {
+		admin.RegisterTraceHandlers(adminMux, traceStore)
+	}
 
 	adminSrv := &http.Server{
 		Addr:         cfg.Admin.Addr,

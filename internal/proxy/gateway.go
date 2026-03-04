@@ -62,7 +62,7 @@ func NewGateway(cfg *config.Config, log *zap.SugaredLogger, authCfg *config.Auth
 // Reload swaps in a new set of routes without downtime.
 // Existing health-checkers for unchanged backends are preserved.
 func (gw *Gateway) Reload(cfg *config.Config) error {
-	routes, err := buildRoutes(cfg.Routes, gw.log)
+	routes, err := buildRoutes(cfg.Routes, gw.log, gw.authConfig, gw.traceStore)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,22 @@ logging:
   level: info
   format: json
 
+auth:
+  enabled: false
+  jwks_url: ""
+  public_key_path: ""
+  skip_paths:
+    - /healthz
+    - /readyz
+    - /metrics
+    - /backends
+    - /traces
+
+tracing:
+  enabled: false
+  exporter: stdout
+  service_name: gateway-pro
+
 routes:
   - path_prefix: /api/users
     lb_algorithm: round_robin
