@@ -40,7 +40,7 @@ func TestTraces_IncludeTimingBreakdown(t *testing.T) {
 		"metrics": 1 * time.Millisecond,
 	}
 
-	store.Add(&middleware.TraceSpan{
+	store.Add(middleware.TraceSpan{
 		TraceID:    "test-trace-123",
 		Path:       "/api/users",
 		Method:     "GET",
@@ -80,7 +80,7 @@ func TestTraces_RingBufferEviction(t *testing.T) {
 	store := middleware.NewTraceStore(100)
 
 	for i := 0; i < 150; i++ {
-		store.Add(&middleware.TraceSpan{
+		store.Add(middleware.TraceSpan{
 			TraceID:    "trace-" + string(rune('0'+i%10)),
 			Path:       "/test",
 			Method:     "GET",
