@@ -48,7 +48,7 @@ func NewTraceStore(max int) *TraceStore {
 	return &TraceStore{spans: make([]TraceSpan, 0, max), max: max}
 }
 
-func (ts *TraceStore) add(s TraceSpan) {
+func (ts *TraceStore) Add(s TraceSpan) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	if len(ts.spans) >= ts.max {
@@ -188,7 +188,7 @@ func Tracing(serviceName string, store *TraceStore) func(http.Handler) http.Hand
 			dur := time.Since(start)
 
 			if store != nil {
-				store.add(TraceSpan{
+				store.Add(TraceSpan{
 					TraceID:    traceID,
 					Path:       r.URL.Path,
 					Method:     r.Method,
@@ -234,7 +234,7 @@ func NewTracingMiddleware(cfg TracingConfig) (func(http.Handler) http.Handler, *
 			next.ServeHTTP(cw, r)
 			dur := time.Since(start)
 
-			store.add(TraceSpan{
+			store.Add(TraceSpan{
 				TraceID:    traceID,
 				Path:       r.URL.Path,
 				Method:     r.Method,
