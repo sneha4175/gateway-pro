@@ -231,8 +231,15 @@ func buildRoute(cfg config.RouteConfig, log *zap.SugaredLogger, authCfg *config.
 	)
 
 	if authCfg != nil && authCfg.Enabled {
-		// Auth middleware will be added in main.go after loading public key
-		// For now, we'll skip it here
+		authMW, err := middleware.NewAuthMiddleware(middleware.AuthConfig{
+			Enabled:       authCfg.Enabled,
+			PublicKeyPath: authCfg.PublicKeyPath,
+			SkipPaths:     authCfg.SkipPaths,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("auth middleware: %w", err)
+		}
+		chain = append(chain, authMW)
 	}
 
 	rt.handler = middleware.Chain(core, chain...)
